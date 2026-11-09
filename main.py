@@ -1,4 +1,5 @@
 import json
+import random
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -150,10 +151,11 @@ class QuizGame:
             return
 
         total = len(self.quizzes)
+        selected_quizzes = random.sample(self.quizzes, k=total)
         correct_count = 0
         print(f"\n퀴즈를 시작합니다. 총 {total}문제입니다.")
 
-        for number, quiz in enumerate(self.quizzes, start=1):
+        for number, quiz in enumerate(selected_quizzes, start=1):
             print(f"\n[문제 {number}/{total}]")
             quiz.show()
             selection = read_number("정답 입력: ", 1, len(quiz.choices))
