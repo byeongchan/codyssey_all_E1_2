@@ -64,7 +64,7 @@ def show_menu():
 def play_quiz(quizzes):
     if not quizzes:
         print("등록된 퀴즈가 없습니다.")
-        return
+        return None
 
     total = len(quizzes)
     correct_count = 0
@@ -81,6 +81,7 @@ def play_quiz(quizzes):
             print(f"오답입니다. 정답은 {quiz.answer}번입니다.")
 
     print(f"\n결과: {total}문제 중 {correct_count}문제 정답")
+    return correct_count
 
 
 def add_quiz(quizzes):
@@ -105,8 +106,17 @@ def show_quiz_list(quizzes):
         print(f"{number}. {quiz.question}")
 
 
+def show_best_score(best_score):
+    if best_score is None:
+        print("아직 퀴즈를 완료한 기록이 없습니다.")
+        return
+
+    print(f"최고 기록: {best_score}문제 정답")
+
+
 def main():
     quizzes = create_default_quizzes()
+    best_score = None
     while True:
         show_menu()
         selection = read_number("선택: ", 1, len(MENU_OPTIONS))
@@ -116,13 +126,16 @@ def main():
             return
 
         if selection == 1:
-            play_quiz(quizzes)
+            score = play_quiz(quizzes)
+            if score is not None and (best_score is None or score > best_score):
+                best_score = score
+                print("새로운 최고 기록입니다!")
         elif selection == 2:
             add_quiz(quizzes)
         elif selection == 3:
             show_quiz_list(quizzes)
-        else:
-            print(f"{MENU_OPTIONS[selection - 1]} 기능은 준비 중입니다.")
+        elif selection == 4:
+            show_best_score(best_score)
 
 
 if __name__ == "__main__":
