@@ -17,6 +17,7 @@ MENU_OPTIONS = (
     "퀴즈 목록",
     "점수 확인",
     "종료",
+    "퀴즈 삭제",
 )
 
 
@@ -226,6 +227,21 @@ class QuizGame:
         for number, quiz in enumerate(self.quizzes, start=1):
             print(f"{number}. {quiz.question}")
 
+    def delete_quiz(self):
+        self.show_quiz_list()
+        if not self.quizzes:
+            return
+
+        selection = read_number("삭제할 문제 번호 (0: 취소): ", 0, len(self.quizzes))
+        if selection == 0:
+            print("삭제를 취소했습니다.")
+            return
+
+        self.needs_save = True
+        deleted = self.quizzes.pop(selection - 1)
+        print(f"퀴즈를 삭제했습니다: {deleted.question}")
+        self.save_state()
+
     def show_best_score(self):
         if self.best_score is None:
             print("아직 퀴즈를 완료한 기록이 없습니다.")
@@ -240,7 +256,7 @@ class QuizGame:
                 self.show_menu()
                 selection = read_number("선택: ", 1, len(MENU_OPTIONS))
 
-                if selection == len(MENU_OPTIONS):
+                if selection == 5:
                     break
 
                 if selection == 1:
@@ -251,6 +267,8 @@ class QuizGame:
                     self.show_quiz_list()
                 elif selection == 4:
                     self.show_best_score()
+                elif selection == 6:
+                    self.delete_quiz()
 
             self.save_state()
         except (KeyboardInterrupt, EOFError):
