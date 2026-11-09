@@ -47,6 +47,14 @@ def read_number(prompt, minimum, maximum):
         print(f"{minimum}~{maximum} 사이의 숫자를 입력하세요.")
 
 
+def read_text(prompt):
+    while True:
+        text = input(prompt).strip()
+        if text:
+            return text
+        print("내용을 입력하세요.")
+
+
 def show_menu():
     print("\n=== 파이썬과 Git 실전 퀴즈 ===")
     for number, label in enumerate(MENU_OPTIONS, start=1):
@@ -75,6 +83,18 @@ def play_quiz(quizzes):
     print(f"\n결과: {total}문제 중 {correct_count}문제 정답")
 
 
+def add_quiz(quizzes):
+    print("\n새 퀴즈를 추가합니다.")
+    question = read_text("문제: ")
+    choices = []
+    for number in range(1, 5):
+        choices.append(read_text(f"선택지 {number}: "))
+    answer = read_number("정답 번호 (1~4): ", 1, len(choices))
+
+    quizzes.append(Quiz(question, choices, answer))
+    print("퀴즈가 추가되었습니다.")
+
+
 def main():
     quizzes = create_default_quizzes()
     while True:
@@ -87,6 +107,8 @@ def main():
 
         if selection == 1:
             play_quiz(quizzes)
+        elif selection == 2:
+            add_quiz(quizzes)
         else:
             print(f"{MENU_OPTIONS[selection - 1]} 기능은 준비 중입니다.")
 
