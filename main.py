@@ -53,7 +53,30 @@ def show_menu():
         print(f"{number}. {label}")
 
 
+def play_quiz(quizzes):
+    if not quizzes:
+        print("등록된 퀴즈가 없습니다.")
+        return
+
+    total = len(quizzes)
+    correct_count = 0
+    print(f"\n퀴즈를 시작합니다. 총 {total}문제입니다.")
+
+    for number, quiz in enumerate(quizzes, start=1):
+        print(f"\n[문제 {number}/{total}]")
+        quiz.show()
+        selection = read_number("정답 입력: ", 1, len(quiz.choices))
+        if quiz.is_correct(selection):
+            correct_count += 1
+            print("정답입니다!")
+        else:
+            print(f"오답입니다. 정답은 {quiz.answer}번입니다.")
+
+    print(f"\n결과: {total}문제 중 {correct_count}문제 정답")
+
+
 def main():
+    quizzes = create_default_quizzes()
     while True:
         show_menu()
         selection = read_number("선택: ", 1, len(MENU_OPTIONS))
@@ -62,7 +85,10 @@ def main():
             print("퀴즈 게임을 종료합니다.")
             return
 
-        print(f"{MENU_OPTIONS[selection - 1]} 기능은 준비 중입니다.")
+        if selection == 1:
+            play_quiz(quizzes)
+        else:
+            print(f"{MENU_OPTIONS[selection - 1]} 기능은 준비 중입니다.")
 
 
 if __name__ == "__main__":
