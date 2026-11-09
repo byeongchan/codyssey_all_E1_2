@@ -150,7 +150,8 @@ class QuizGame:
             print("등록된 퀴즈가 없습니다.")
             return
 
-        total = len(self.quizzes)
+        available = len(self.quizzes)
+        total = read_number(f"풀 문제 수 (1~{available}): ", 1, available)
         selected_quizzes = random.sample(self.quizzes, k=total)
         correct_count = 0
         print(f"\n퀴즈를 시작합니다. 총 {total}문제입니다.")
