@@ -1,3 +1,6 @@
+from questions import DEFAULT_QUESTIONS
+
+
 MENU_OPTIONS = (
     "퀴즈 풀기",
     "퀴즈 추가",
@@ -20,6 +23,13 @@ class Quiz:
 
     def is_correct(self, selection):
         return selection == self.answer
+
+
+def create_default_quizzes():
+    return [
+        Quiz(question, list(choices), answer)
+        for question, choices, answer in DEFAULT_QUESTIONS
+    ]
 
 
 def read_number(prompt, minimum, maximum):
