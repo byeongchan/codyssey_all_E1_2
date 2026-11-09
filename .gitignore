@@ -1,3 +1,4 @@
 /state.json
+/.quiz-state-*/
 __pycache__/
 *.pyc
