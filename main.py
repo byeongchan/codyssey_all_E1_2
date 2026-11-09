@@ -7,6 +7,10 @@ from questions import DEFAULT_QUESTIONS
 
 
 STATE_PATH = Path(__file__).resolve().with_name("state.json")
+DEFAULT_HINTS = {
+    (question, choices, answer): hint
+    for question, choices, answer, hint in DEFAULT_QUESTIONS
+}
 MENU_OPTIONS = (
     "퀴즈 풀기",
     "퀴즈 추가",
@@ -17,10 +21,11 @@ MENU_OPTIONS = (
 
 
 class Quiz:
-    def __init__(self, question, choices, answer):
+    def __init__(self, question, choices, answer, hint=None):
         self.question = question
         self.choices = choices
         self.answer = answer
+        self.hint = hint
 
     def show(self):
         print(self.question)
@@ -48,13 +53,20 @@ class Quiz:
         if type(answer) is not int or not 1 <= answer <= len(choices):
             raise ValueError("정답 번호가 선택지 범위를 벗어났습니다.")
 
-        return cls(question, choices, answer)
+        if "hint" in data:
+            hint = data["hint"]
+            if hint is not None and (not isinstance(hint, str) or not hint.strip()):
+                raise ValueError("힌트는 null 또는 비어 있지 않은 문자열이어야 합니다.")
+        else:
+            hint = DEFAULT_HINTS.get((question, tuple(choices), answer))
+
+        return cls(question, choices, answer, hint)
 
 
 def create_default_quizzes():
     return [
-        Quiz(question, list(choices), answer)
-        for question, choices, answer in DEFAULT_QUESTIONS
+        Quiz(question, list(choices), answer, hint)
+        for question, choices, answer, hint in DEFAULT_QUESTIONS
     ]
 
 
@@ -98,8 +110,10 @@ class QuizGame:
                 raise ValueError("최고 점수 항목이 필요합니다.")
 
             best_score = data["best_score"]
-            if best_score is not None and (type(best_score) is not int or best_score < 0):
-                raise ValueError("최고 점수는 null 또는 0 이상의 정수여야 합니다.")
+            if best_score is not None and (
+                type(best_score) not in (int, float) or not 0 <= best_score < float("inf")
+            ):
+                raise ValueError("최고 점수는 null 또는 유한한 0 이상의 수여야 합니다.")
 
             quizzes = [Quiz.from_dict(item) for item in data["quizzes"]]
         except FileNotFoundError:
@@ -121,7 +135,12 @@ class QuizGame:
 
         data = {
             "quizzes": [
-                {"question": quiz.question, "choices": quiz.choices, "answer": quiz.answer}
+                {
+                    "question": quiz.question,
+                    "choices": quiz.choices,
+                    "answer": quiz.answer,
+                    "hint": quiz.hint,
+                }
                 for quiz in self.quizzes
             ],
             "best_score": self.best_score,
@@ -154,22 +173,33 @@ class QuizGame:
         total = read_number(f"풀 문제 수 (1~{available}): ", 1, available)
         selected_quizzes = random.sample(self.quizzes, k=total)
         correct_count = 0
+        score = 0
         print(f"\n퀴즈를 시작합니다. 총 {total}문제입니다.")
 
         for number, quiz in enumerate(selected_quizzes, start=1):
             print(f"\n[문제 {number}/{total}]")
             quiz.show()
-            selection = read_number("정답 입력: ", 1, len(quiz.choices))
+            if quiz.hint is None:
+                selection = read_number("정답 입력: ", 1, len(quiz.choices))
+            else:
+                selection = read_number("정답 입력 (0: 힌트, 정답 시 0.5점): ", 0, len(quiz.choices))
+
+            used_hint = selection == 0
+            if used_hint:
+                print(f"힌트: {quiz.hint}")
+                selection = read_number("정답 입력: ", 1, len(quiz.choices))
+
             if quiz.is_correct(selection):
                 correct_count += 1
+                score += 0.5 if used_hint else 1
                 print("정답입니다!")
             else:
                 print(f"오답입니다. 정답은 {quiz.answer}번입니다.")
 
-        print(f"\n결과: {total}문제 중 {correct_count}문제 정답")
-        if self.best_score is None or correct_count > self.best_score:
+        print(f"\n결과: {total}문제 중 {correct_count}문제 정답 ({score:g}점)")
+        if self.best_score is None or score > self.best_score:
             self.needs_save = True
-            self.best_score = correct_count
+            self.best_score = score
             print("새로운 최고 기록입니다!")
             self.save_state()
 
@@ -180,9 +210,10 @@ class QuizGame:
         for number in range(1, 5):
             choices.append(read_text(f"선택지 {number}: "))
         answer = read_number("정답 번호 (1~4): ", 1, len(choices))
+        hint = input("힌트 (선택, 건너뛰려면 Enter): ").strip() or None
 
         self.needs_save = True
-        self.quizzes.append(Quiz(question, choices, answer))
+        self.quizzes.append(Quiz(question, choices, answer, hint))
         print("퀴즈가 추가되었습니다.")
         self.save_state()
 
@@ -200,7 +231,7 @@ class QuizGame:
             print("아직 퀴즈를 완료한 기록이 없습니다.")
             return
 
-        print(f"최고 기록: {self.best_score}문제 정답")
+        print(f"최고 기록: {self.best_score:g}점")
 
     def run(self):
         try:
