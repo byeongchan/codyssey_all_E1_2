@@ -1,5 +1,6 @@
 import json
 import random
+from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -16,8 +17,9 @@ MENU_OPTIONS = (
     "퀴즈 추가",
     "퀴즈 목록",
     "점수 확인",
-    "종료",
     "퀴즈 삭제",
+    "점수 기록",
+    "종료",
 )
 
 
@@ -94,10 +96,31 @@ def read_text(prompt):
         print("내용을 입력하세요.")
 
 
+def validate_score_history(history):
+    if not isinstance(history, list):
+        raise ValueError("점수 기록은 목록이어야 합니다.")
+
+    for entry in history:
+        if not isinstance(entry, dict):
+            raise ValueError("게임 기록은 객체여야 합니다.")
+
+        played_at = entry.get("played_at")
+        question_count = entry.get("question_count")
+        score = entry.get("score")
+        if not isinstance(played_at, str):
+            raise ValueError("게임을 완료한 날짜와 시간이 필요합니다.")
+        datetime.fromisoformat(played_at)
+        if type(question_count) is not int or question_count < 1:
+            raise ValueError("푼 문제 수는 1 이상의 정수여야 합니다.")
+        if type(score) not in (int, float) or not 0 <= score <= question_count:
+            raise ValueError("게임 점수가 범위를 벗어났습니다.")
+
+
 class QuizGame:
     def __init__(self):
         self.quizzes = create_default_quizzes()
         self.best_score = None
+        self.score_history = []
         self.needs_save = False
 
     def load_state(self):
@@ -117,6 +140,8 @@ class QuizGame:
                 raise ValueError("최고 점수는 null 또는 유한한 0 이상의 수여야 합니다.")
 
             quizzes = [Quiz.from_dict(item) for item in data["quizzes"]]
+            score_history = data.get("score_history", [])
+            validate_score_history(score_history)
         except FileNotFoundError:
             return
         except (ValueError, RecursionError):
@@ -129,6 +154,7 @@ class QuizGame:
 
         self.quizzes = quizzes
         self.best_score = best_score
+        self.score_history = score_history
 
     def save_state(self):
         if not self.needs_save:
@@ -145,6 +171,7 @@ class QuizGame:
                 for quiz in self.quizzes
             ],
             "best_score": self.best_score,
+            "score_history": self.score_history,
         }
 
         try:
@@ -198,11 +225,16 @@ class QuizGame:
                 print(f"오답입니다. 정답은 {quiz.answer}번입니다.")
 
         print(f"\n결과: {total}문제 중 {correct_count}문제 정답 ({score:g}점)")
+        self.needs_save = True
+        self.score_history.append({
+            "played_at": datetime.now().astimezone().isoformat(sep=" ", timespec="seconds"),
+            "question_count": total,
+            "score": score,
+        })
         if self.best_score is None or score > self.best_score:
-            self.needs_save = True
             self.best_score = score
             print("새로운 최고 기록입니다!")
-            self.save_state()
+        self.save_state()
 
     def add_quiz(self):
         print("\n새 퀴즈를 추가합니다.")
@@ -249,6 +281,15 @@ class QuizGame:
 
         print(f"최고 기록: {self.best_score:g}점")
 
+    def show_score_history(self):
+        if not self.score_history:
+            print("아직 저장된 게임별 기록이 없습니다.")
+            return
+
+        print("\n게임별 점수 기록 (최신순)")
+        for entry in reversed(self.score_history):
+            print(f"{entry['played_at']} | {entry['question_count']}문제 | {entry['score']:g}점")
+
     def run(self):
         try:
             self.load_state()
@@ -256,7 +297,7 @@ class QuizGame:
                 self.show_menu()
                 selection = read_number("선택: ", 1, len(MENU_OPTIONS))
 
-                if selection == 5:
+                if selection == len(MENU_OPTIONS):
                     break
 
                 if selection == 1:
@@ -267,8 +308,10 @@ class QuizGame:
                     self.show_quiz_list()
                 elif selection == 4:
                     self.show_best_score()
-                elif selection == 6:
+                elif selection == 5:
                     self.delete_quiz()
+                elif selection == 6:
+                    self.show_score_history()
 
             self.save_state()
         except (KeyboardInterrupt, EOFError):
